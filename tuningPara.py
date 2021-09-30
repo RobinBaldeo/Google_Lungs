@@ -4,8 +4,8 @@ from optuna.integration import LightGBMPruningCallback
 import sklearn.model_selection as ms
 from sklearn.linear_model import LogisticRegression
 pd.set_option('expand_frame_repr', False)
-from sklearn.metrics import accuracy_score, roc_auc_score
-from lightgbm import LGBMClassifier
+from sklearn.metrics import accuracy_score, roc_auc_score, mean_squared_error
+from lightgbm import LGBMRegressor
 from sklearn.svm import SVC
 import optuna
 from collections import namedtuple
