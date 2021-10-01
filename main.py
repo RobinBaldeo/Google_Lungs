@@ -5,19 +5,66 @@
 
 # this is a test
 import pandas as pd
+import numpy as np
+import  sklearn.model_selection  as ms
+
+
+
+
+def reduce_df(df):
+
+    print(f"orginal dataset :{df.memory_usage().sum() / 1024 ** 2} mb")
+    for i in df.columns:
+        col_type = df[i].dtypes
+
+        if str(col_type)[0:1] in ["i", "f"]:
+            col_min, col_max = np.min(df[i]), np.max(df[i])
+            if str(col_type)[0:1] == "i":
+                for j in [np.int8,np.int16,np.int32, np.int64]:
+                    if col_min > np.iinfo(j).min and col_max < np.iinfo(j).max:
+                        df[i] = df[i].astype(j)
+                        break
+            else:
+                for j in [np.float16,np.float32,np.float64]:
+                    if col_min > np.finfo(j).min and col_max < np.finfo(j).max:
+                        df[i] = df[i].astype(j)
+                        break
+
+    print(f"dataset reduced to :{df.memory_usage().sum() / 1024 ** 2} mb")
+    return df
+
 
 
 def main():
-    train = pd.read_csv('train.csv')
-    test = pd.read_csv('test.csv')
-
-    for i in [train, test]:
-        print()
-        print(i.dtypes)
+    train = reduce_df(pd.read_csv('train.csv'))
+    test = reduce_df(pd.read_csv('test.csv'))
+    fold = 10
 
 
+    unique_breath_id = [i for i in train['breath_id'].drop_duplicates()]
+    split_X = pd.DataFrame(unique_breath_id, index=unique_breath_id, columns=["breath_id"])
+    print(len(split_X.index))
 
-# Press the green button in the gutter to run the script.
+    kf = ms.KFold(n_splits=fold, random_state=None, shuffle=False)
+
+    for counter, (train_index, test_index) in enumerate(kf.split(split_X)):
+        hv = len(train_index)
+        if counter < fold - 1:
+            hv = len(train_index) / fold
+            hv = int(hv * (counter + 1))
+
+        print(f"{counter} {hv}")
+        # print(f"{counter} TRAIN:", train_index, "TEST:", test_index)
+
+
+
+
+
+
+
+
+
+
 if __name__ == '__main__':
     main()
 
