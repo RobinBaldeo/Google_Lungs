@@ -7,7 +7,12 @@
 import pandas as pd
 import numpy as np
 import  sklearn.model_selection  as ms
+from sklearn.metrics import mean_squared_error, r2_score
 from tuningPara import model_best_para
+from sklearn.preprocessing import StandardScaler
+
+from sklearn.neighbors import KNeighborsRegressor
+from collections import namedtuple
 
 
 
@@ -40,34 +45,44 @@ def main():
     train = reduce_df(pd.read_csv('train.csv'))
     test = reduce_df(pd.read_csv('test.csv'))
     fold = 10
+    pred_ = namedtuple("pred_", "pred actual")
+    scale  = StandardScaler()
+    # train_ = train.copy()
+    train["row"] = (train.groupby('breath_id')['id'].rank(method="first", ascending=True)).astype("int")
+    test["row"] = (test.groupby('breath_id')['id'].rank(method="first", ascending=True)).astype("int")
+    X = train.drop(columns=["pressure", 'id', 'breath_id'])
+    Y = pd.DataFrame(train["pressure"])
+    X = scale.fit_transform(X)
+
+    xtrain, xtest,ytrain, ytest = ms.train_test_split(X, Y, test_size=.2, random_state=0, shuffle=True)
+
+    print(xtrain)
+    print(xtest)
+    #
+    model = KNeighborsRegressor(n_neighbors=9)
+    model.fit(xtrain, ytrain.values)
+    pred = model.predict(xtest)
+
+    df = pd.DataFrame(ytest.values)
+    df["p"] = pred
+
+    print(df.head(5))
+    df.columns = ["actual", "predicted"]
+    print(df.head(20))
 
 
-    unique_breath_id = [i for i in train['breath_id'].drop_duplicates()]
-    split_X = pd.DataFrame(unique_breath_id, index=unique_breath_id, columns=["breath_id"])
-    # print(len(split_X.index))
 
-    kf = ms.KFold(n_splits=fold, random_state=None, shuffle=False)
 
-    for counter, (train_index, test_index) in enumerate(kf.split(split_X)):
-        hv = len(train_index)
-        if counter < fold - 1:
-            hv = len(train_index) / fold
-            hv = int(hv * (counter + 1))
 
-        xtrain = train.merge(split_X[0:hv], right_on=["breath_id"], left_on=["breath_id"])
-        ytrain = xtrain["pressure"]
-        xtrain.drop(columns = ["pressure", "breath_id", "id"], inplace=True)
-        print(ytrain.shape)
-        print(xtrain.shape)
+    print(mean_squared_error(ytest.values, pred )**.5)
 
-        xval = train.merge(split_X.iloc[test_index, :], right_on=["breath_id"], left_on=["breath_id"])
-        yval = xval["pressure"]
-        xval.drop(columns = ["pressure", "breath_id", "id"], inplace=True)
 
-        # , X_, Y_, xval, yval
-        # , xtrain, xval, ytrain, yval
-        tp = model_best_para(xtrain.values, xval.values,ytrain.values, yval.values )
-        tp.para()
+
+
+
+
+
+
 
 
 
